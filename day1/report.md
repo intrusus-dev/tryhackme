@@ -344,3 +344,9 @@ The PowerShell script (`IS.ps1`) is designed to:
 
 ### **Network Artifacts**
 - C2 URL: `http://papash3ll.thm/data`
+
+## **Recommendations:**
+- Block access to the domain `raw.githubusercontent.com/MM-WarevilleTHM/` in the network firewall.
+- Perform endpoint scans for the presence of `IS.ps1` or related malicious artifacts.
+- Analyze `IS.ps1` to understand its behavior and assess potential system compromise.
+- Educate users on avoiding suspicious download sites.
